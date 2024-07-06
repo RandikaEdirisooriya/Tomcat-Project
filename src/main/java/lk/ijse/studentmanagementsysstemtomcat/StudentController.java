@@ -16,6 +16,8 @@ import lk.ijse.studentmanagementsysstemtomcat.Dto.StudentDto;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @WebServlet(urlPatterns = "/Student")
@@ -56,11 +58,16 @@ public class StudentController extends HttpServlet {
 
 
 
-        String id= UUID.randomUUID().toString();
+      /*  String id= UUID.randomUUID().toString();
         Jsonb jsonb= JsonbBuilder.create();
         StudentDto studentDto=jsonb.fromJson(req.getReader(),StudentDto.class);
         studentDto.setId(id);
-        System.out.println(studentDto);
+        System.out.println(studentDto);*/
+        Jsonb jsonb= JsonbBuilder.create();
+        List<StudentDto> studentList = jsonb.fromJson(req.getReader(), new ArrayList<StudentDto>(){}.getClass().getGenericSuperclass());
+
+        // Assign UUIDs and print each student
+     studentList.forEach(System.out::println);
 
     }
 
