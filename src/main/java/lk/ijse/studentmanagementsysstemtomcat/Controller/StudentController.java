@@ -27,7 +27,7 @@ import java.util.UUID;
 public class StudentController extends HttpServlet {
 Connection connection;
 static String SAVE_STUDENT="INSERT INTO students(id,name,city,email,level)VALUE(?,?,?,?,?)";
-static String  GET_STUDENT = "SELECT id, name, email, city, level FROM students WHERE id = ?";;
+static String GET_STUDENT = "SELECT * FROM students WHERE id = ?";
     @Override
     public void init() throws ServletException {
         try {
@@ -84,22 +84,25 @@ static String  GET_STUDENT = "SELECT id, name, email, city, level FROM students 
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        var studentDTO = new StudentDto();
+        var studentDto = new StudentDto();
         String stuId = req.getParameter("id");
         try(var writer = resp.getWriter()){
             PreparedStatement preparedStatement = connection.prepareStatement(GET_STUDENT);
             preparedStatement.setString(1, stuId);
             ResultSet resultSet = preparedStatement.executeQuery();
+            System.out.println(resultSet);
             while (resultSet.next()) {
-                studentDTO.setId(resultSet.getString("id"));
-                studentDTO.setName(resultSet.getString("name"));
-                studentDTO.setEmail(resultSet.getString("email"));
-                studentDTO.setCity(resultSet.getString("city"));
-                studentDTO.setLevel(resultSet.getString("level"));
+                System.out.println("AAAAAA");
+                studentDto.setId(resultSet.getString("id"));
+                studentDto.setName(resultSet.getString("name"));
+                studentDto.setEmail(resultSet.getString("email"));
+                studentDto.setCity(resultSet.getString("city"));
+                studentDto.setLevel(resultSet.getString("level"));
             }
-            writer.write(studentDTO.toString());
+            System.out.println(studentDto);
+            writer.write(studentDto.toString());
         }catch (Exception e){
-
+e.printStackTrace();
         }
     }
 
