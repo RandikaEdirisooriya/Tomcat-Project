@@ -63,7 +63,7 @@ public class StudentController extends HttpServlet {
         StudentDto studentDto=jsonb.fromJson(req.getReader(),StudentDto.class);
         studentDto.setId(id);
         System.out.println(studentDto);*/
-        Jsonb jsonb= JsonbBuilder.create();
+        Jsonb jsonb= JsonbBuilder.create();                                                 /*methana me karala thiynne annonymus inner class ekkk gahala thiyana ethakota me reference eka ain karanna ba ..ethakoata eka galawanna ba ekata thamai  meka gahala thiyenne*/
         List<StudentDto> studentList = jsonb.fromJson(req.getReader(), new ArrayList<StudentDto>(){}.getClass().getGenericSuperclass());
 
         // Assign UUIDs and print each student
