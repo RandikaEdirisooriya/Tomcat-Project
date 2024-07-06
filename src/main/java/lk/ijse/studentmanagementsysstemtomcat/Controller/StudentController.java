@@ -18,10 +18,7 @@ import lk.ijse.studentmanagementsysstemtomcat.Dto.StudentDto;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -30,6 +27,7 @@ import java.util.UUID;
 public class StudentController extends HttpServlet {
 Connection connection;
 static String SAVE_STUDENT="INSERT INTO students(id,name,city,email,level)VALUE(?,?,?,?,?)";
+static String  GET_STUDENT = "SELECT id, name, email, city, level FROM students WHERE id = ?";;
     @Override
     public void init() throws ServletException {
         try {
@@ -86,9 +84,24 @@ static String SAVE_STUDENT="INSERT INTO students(id,name,city,email,level)VALUE(
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        //Todo :get student
-    }
+        var studentDTO = new StudentDto();
+        String stuId = req.getParameter("id");
+        try(var writer = resp.getWriter()){
+            PreparedStatement preparedStatement = connection.prepareStatement(GET_STUDENT);
+            preparedStatement.setString(1, stuId);
+            ResultSet resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()) {
+                studentDTO.setId(resultSet.getString("id"));
+                studentDTO.setName(resultSet.getString("name"));
+                studentDTO.setEmail(resultSet.getString("email"));
+                studentDTO.setCity(resultSet.getString("city"));
+                studentDTO.setLevel(resultSet.getString("level"));
+            }
+            writer.write(studentDTO.toString());
+        }catch (Exception e){
 
+        }
+    }
 
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
