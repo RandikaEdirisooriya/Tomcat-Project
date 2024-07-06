@@ -66,7 +66,7 @@ static String SAVE_STUDENT="INSERT INTO students(id,name,city,email,level)VALUE(
 
             PreparedStatement preparedStatement = connection.prepareStatement(SAVE_STUDENT);
             for (StudentDto stu: studentDTO){
-                preparedStatement.setString(1,stu.getId());
+                preparedStatement.setString(1,id);
                 preparedStatement.setString(2,stu.getName());
                 preparedStatement.setString(3,stu.getEmail());
                 preparedStatement.setString(4,stu.getCity());
