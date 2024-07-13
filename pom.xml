@@ -30,7 +30,7 @@
             <artifactId>jakarta.servlet-api</artifactId>
             <version>6.0.0</version>
             <scope>provided</scope>
-        </dependency>
+        </dependency><!--servelet eka provide karanawa tomcat wisin ithiritika karanagena yai-->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>

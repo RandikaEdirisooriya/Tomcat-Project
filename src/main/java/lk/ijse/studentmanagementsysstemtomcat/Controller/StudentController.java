@@ -1,40 +1,59 @@
 package lk.ijse.studentmanagementsysstemtomcat.Controller;
 
+import jakarta.json.JsonException;
 import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.JsonbBuilder;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebInitParam;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lk.ijse.studentmanagementsysstemtomcat.Dto.StudentDto;
+import lk.ijse.studentmanagementsysstemtomcat.Dao.impl.StudentDaoImpl;
+import lk.ijse.studentmanagementsysstemtomcat.Util.UtilProcess;
 
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
-@WebServlet(urlPatterns = "/Student")
+@WebServlet(urlPatterns = "/Student",
+initParams = {
+        @WebInitParam(name = "driver-class",value = "com.mysql.cj.jdbc.Driver"),
+        @WebInitParam(name = "dbURL",value = "jdbc:mysql://localhost:3306/tomcatDB?createDatabaseIfNotExist=true"),
+        @WebInitParam(name = "dbUserName",value = "root"),
+        @WebInitParam(name = "dbPassword",value = "1234")
+}
+
+)
 public class StudentController extends HttpServlet {
     Connection connection;
-    static String SAVE_STUDENT = "INSERT INTO students(id, name, city, email, level) VALUES (?, ?, ?, ?, ?)";
+    static String SAVE_STUDENT = "INSERT INTO students(id,name,city,email,level)VALUE(?,?,?,?,?)";
     static String GET_STUDENT = "SELECT * FROM students WHERE id = ?";
+    static String UPDATE_STUDENT = "UPDATE students SET name = ?, email = ?, city = ?, level = ? WHERE id = ?";
+    static String DELETE_STUDENT = "DELETE FROM students WHERE id = ?";
 
     @Override
     public void init() throws ServletException {
         try {
-            var driverClass = getServletContext().getInitParameter("driver-class");
+
+            var driverclass = getServletContext().getInitParameter("driver-class");
             var dbURL = getServletContext().getInitParameter("dbURL");
             var dbUserName = getServletContext().getInitParameter("dbUserName");
             var dbPassword = getServletContext().getInitParameter("dbPassword");
 
-            Class.forName(driverClass);
+            /*get config from servlet*/
+            /*  *//*meka echchara hoda widihak nemei*//*
+            var driverclass = getServletConfig().getInitParameter("driver-class");
+            var dbURL = getServletConfig().getInitParameter("dbURL");
+            var dbUserName = getServletConfig().getInitParameter("dbUserName");
+            var dbPassword = getServletConfig().getInitParameter("dbPassword");*/
+
+
+            Class.forName(driverclass);
             this.connection = DriverManager.getConnection(dbURL, dbUserName, dbPassword);
+
 
         } catch (ClassNotFoundException | SQLException e) {
             e.printStackTrace();
@@ -43,61 +62,43 @@ public class StudentController extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        try {
-            if (!"application/json".equalsIgnoreCase(req.getContentType())) {
-                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Expected content type: application/json");
-                return;
-            }
-            String id = UUID.randomUUID().toString();
-            Jsonb jsonb = JsonbBuilder.create();
-            List<StudentDto> studentDTO = jsonb.fromJson(req.getReader(), new ArrayList<StudentDto>() {
-            }.getClass().getGenericSuperclass());
 
-            studentDTO.forEach(System.out::println);
-            // persist student data
-
-            PreparedStatement preparedStatement = connection.prepareStatement(SAVE_STUDENT);
-            for (StudentDto stu : studentDTO) {
-                preparedStatement.setString(1, id);
-                preparedStatement.setString(2, stu.getName());
-                preparedStatement.setString(3, stu.getEmail());
-                preparedStatement.setString(4, stu.getCity());
-                preparedStatement.setString(5, stu.getLevel());
-
-                if (preparedStatement.executeUpdate() != 0) {
-                    resp.getWriter().write("Save student");
-                } else {
-                    resp.getWriter().write("Unable to save student");
-                }
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
+        if (!"application/json".equalsIgnoreCase(req.getContentType())) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Expected content type: application/json");
+            return;
         }
-    }
+        try (var writer = resp.getWriter()) {
+            Jsonb jsonb = JsonbBuilder.create();
+            StudentDto studentDTO = jsonb.fromJson(req.getReader(), StudentDto.class);
+            studentDTO.setId(UtilProcess.genereteId());
+            var saveData = new StudentDaoImpl();
+            writer.write(saveData.SaveStudent(studentDTO, connection));
+        } catch (JsonException | SQLException e) {
+            throw new RuntimeException(e);
+        }
 
+
+    }
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        var studentDto = new StudentDto();
-        String stuId = req.getParameter("id");
+        var studentId = req.getParameter("id");
+        var dataProcess = new StudentDaoImpl();
         try (var writer = resp.getWriter()) {
-            PreparedStatement preparedStatement = connection.prepareStatement(GET_STUDENT);
-            preparedStatement.setString(1, stuId);
-            ResultSet resultSet = preparedStatement.executeQuery();
-            System.out.println(resultSet);
-            while (resultSet.next()) {
-                studentDto.setId(resultSet.getString("id"));
-                studentDto.setName(resultSet.getString("name"));
-                studentDto.setEmail(resultSet.getString("email"));
-                studentDto.setCity(resultSet.getString("city"));
-                studentDto.setLevel(resultSet.getString("level"));
-            }
-            System.out.println(studentDto);
-            writer.write(studentDto.toString());
-        } catch (Exception e) {
-            e.printStackTrace();
+            var student = dataProcess.getStudent(studentId, connection);
+            System.out.println(student);
+            resp.setContentType("application/json");
+            var jsonb = JsonbBuilder.create();
+            jsonb.toJson(student, writer);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
+
+
+
+
+
+
 
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -107,32 +108,37 @@ public class StudentController extends HttpServlet {
                 return;
             }
 
-            Jsonb jsonb = JsonbBuilder.create();
-            StudentDto studentDto = jsonb.fromJson(req.getReader(), StudentDto.class);
-
-            if (studentDto.getId() == null || studentDto.getId().isEmpty()) {
-                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Student ID is required for update");
+            String stuId = req.getParameter("id");
+            if (stuId == null || stuId.isEmpty()) {
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Missing or empty student ID");
                 return;
             }
 
-            String UPDATE_STUDENT = "UPDATE students SET name = ?, email = ?, city = ?, level = ? WHERE id = ?";
-            PreparedStatement preparedStatement = connection.prepareStatement(UPDATE_STUDENT);
-            preparedStatement.setString(1, studentDto.getName());
-            preparedStatement.setString(2, studentDto.getEmail());
-            preparedStatement.setString(3, studentDto.getCity());
-            preparedStatement.setString(4, studentDto.getLevel());
-            preparedStatement.setString(5, studentDto.getId());
+            StudentDaoImpl dataProcess = new StudentDaoImpl();
+            try (var reader = req.getReader(); var writer = resp.getWriter()) {
+                Jsonb jsonb = JsonbBuilder.create();
+                StudentDto studentDto;
+                try {
+                    studentDto = jsonb.fromJson(reader, StudentDto.class);
+                } catch (Exception e) {
+                    resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid JSON data");
+                    return;
+                }
 
-            int rowsUpdated = preparedStatement.executeUpdate();
-            if (rowsUpdated > 0) {
-                resp.getWriter().write("Student updated successfully");
-            } else {
-                resp.getWriter().write("Unable to update student");
+                boolean isUpdated = dataProcess.UpdateStudent(stuId, studentDto, connection);
+                resp.setContentType("application/json");
+
+                if (isUpdated) {
+                    writer.println("Updated");
+                } else {
+                    writer.println("Not Updated");
+                }
+                jsonb.toJson(isUpdated, writer);
+            } catch (SQLException e) {
+                throw new ServletException("Database error", e);
             }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "An error occurred while updating the student");
+        } catch (IOException e) {
+            throw new ServletException("IO error", e);
         }
     }
 
@@ -143,19 +149,17 @@ public class StudentController extends HttpServlet {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Student ID is required for deletion");
             return;
         }
+        StudentDaoImpl dataProcess = new StudentDaoImpl();
+        try (var writer= resp.getWriter()){
 
-        try {
-            String DELETE_STUDENT = "DELETE FROM students WHERE id = ?";
-            PreparedStatement preparedStatement = connection.prepareStatement(DELETE_STUDENT);
-            preparedStatement.setString(1, studentId);
 
-            int rowsDeleted = preparedStatement.executeUpdate();
-            if (rowsDeleted > 0) {
-                resp.getWriter().write("Student deleted successfully");
+            boolean isdeleted = dataProcess.deleteStudent(studentId, connection);
+
+            if (isdeleted) {
+                writer.println("Deleted");
             } else {
-                resp.getWriter().write("Unable to delete student");
+                writer.println("Not Deleted");
             }
-
         } catch (Exception e) {
             e.printStackTrace();
             resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "An error occurred while deleting the student");
